@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Dashboard Operativo - DELTEC V27 (Corrección Matrices)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root { --bg: #f0f4f8; --card: #ffffff; --text: #2d3748; --primary: #004a99; --accent: #e53e3e; --success: #38a169; --warning: #d69e2e; --info: #3182ce; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 12px; }
+        
+        .header { text-align: center; margin-bottom: 15px; position: relative; }
+        .header h1 { color: var(--primary); margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }
+        .header p { color: #718096; margin: 3px 0 0; font-weight: 500; font-size: 12px; }
+        
+        .config-bar { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 10px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); flex-wrap: wrap; gap: 10px; border-left: 4px solid #38a169; }
+        .btn-panel { background: #4a5568; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: bold; }
+        .btn-panel:hover { background: #2d3748; }
+        
+        .cloud-status { display: flex; align-items: center; gap: 15px; }
+        .sync-badge { background: #ebf8ff; border: 1px solid #90cdf4; color: #2b6cb0; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; display: flex; align-items: center; gap: 5px;}
+        .sync-badge.loading { background: #fefcbf; border-color: #d69e2e; color: #975a16; }
+
+        .drop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+        .upload-zone { border: 2px dashed #a0aec0; padding: 15px; text-align: center; border-radius: 8px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; justify-content: center; min-height: 50px; }
+        .zone-siprem { background: #e0f2fe; border-color: #38bdf8; }
+        .zone-casuistica { background: #fef08a; border-color: #eab308; }
+        
+        .drop-title { font-weight: bold; font-size: 13px; margin-bottom: 4px; color: var(--text); }
+        .drop-subtitle { font-size: 11px; color: #4a5568; }
+        .status-text { font-size: 11px; display: inline-block; margin-right: 15px; font-weight: bold; }
+
+        .kpi-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 15px; }
+        .kpi-card { background: var(--card); padding: 12px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 5px solid var(--primary); display: flex; flex-direction: column; }
+        .kpi-card.danger { border-left-color: var(--accent); }
+        .kpi-card.warning { border-left-color: var(--warning); }
+        .kpi-card.success { border-left-color: var(--success); }
+        .kpi-title { font-size: 10px; font-weight: 700; color: #a0aec0; text-transform: uppercase; margin-bottom: 3px; }
+        .kpi-value { font-size: 20px; font-weight: 800; color: var(--text); }
+        
+        .section-title { margin: 20px 0 10px 0; color: var(--primary); font-size: 15px; font-weight: bold; border-bottom: 2px solid #edf2f7; padding-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+        .top10-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 15px; }
+        .top10-card { background: var(--card); padding: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .top10-card h4 { margin-top: 0; color: var(--primary); border-bottom: 1px solid #edf2f7; padding-bottom: 4px; font-size: 11.5px; text-transform: uppercase; }
+        .top10-table { width: 100%; font-size: 10px; border-collapse: collapse; }
+        .top10-table th { background: #edf2f7; padding: 4px; text-align: left; }
+        .top10-table td { padding: 4px; border-bottom: 1px solid #edf2f7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; }
+        
+        .tables-grid-3 { display: grid; grid-template-columns: 2.2fr 2.2fr 1fr; gap: 12px; margin-bottom: 15px; align-items: start; }
+        @media (max-width: 1024px) { .tables-grid-3 { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 768px) { .tables-grid-3 { grid-template-columns: 1fr; } }
+        
+        .table-card { background: var(--card); padding: 12px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); max-height: 350px; overflow-y: auto; }
+        .table-card.wide-card { max-height: 600px; grid-column: 1 / -1; } 
+        
+        table.main-table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; }
+        table.main-table th { background: #004a99; color: #ffffff; font-weight: bold; padding: 6px; text-align: center; position: sticky; top: 0; z-index: 1; border: 1px solid #003366; }
+        table.main-table td { padding: 5px 6px; border: 1px solid #e2e8f0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        table.main-table tr.total-row { background: #1a365d; color: #ffffff; font-weight: bold; }
+        table.main-table tr.total-row td { border-color: #2a4365; }
+
+        .col-os { max-width: 130px; white-space: normal !important; word-wrap: break-word; font-size: 9.5px; color: #4a5568; line-height: 1.3; }
+
+        .chart-header { font-size: 12px; font-weight: bold; margin-bottom: 8px; color: var(--primary); border-bottom: 1px solid #edf2f7; padding-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+        .badge { padding: 3px 6px; border-radius: 4px; font-weight: bold; font-size: 10px; display: inline-block; }
+        .badge-red { background: #fed7d7; color: #c53030; }
+        .badge-yellow { background: #fefcbf; color: #975a16; }
+        .badge-green { background: #c6f6d5; color: #22543d; }
+        .badge-blue { background: #ebf8ff; color: #2b6cb0; }
+        .badge-dark { background: #4a5568; color: #ffffff; }
+        
+        select.filtro-select { padding: 5px 8px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 11px; font-weight: bold; }
+        .btn-exportar { background: #38a169; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; }
+        .btn-exportar:hover { background: #276749; }
+        .btn-info { background: #3182ce; color: white; }
+        .btn-danger { background: #e53e3e; }
+
+        .tech-filter-zone { background: #ffffff; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        .tech-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .screenshot-target { background: #ffffff; padding: 15px; border-radius: 6px; border: 1px solid #cbd5e1; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Master Dashboard Operativo - GUAJIRA</h1>
+        <p>Centro de Control Unificado DELTEC GUAJIRA - Inteligencia de Datos v27</p>
+    </div>
+
+    <div class="config-bar">
+        <div>
+            <button class="btn-panel" onclick="document.getElementById('bdiInput').click()">⚙️ Cargar BDI / Tipos OS Manual</button>
+            <button class="btn-panel btn-info" onclick="cargarDatosDesdeGithub()" style="margin-left: 10px;">🔄 Forzar Sincronización</button>
+            <button class="btn-panel btn-danger" onclick="exportarBaseMinableCompleta()" style="margin-left: 10px;">💎 Exportar Base Minable Completa (Excel)</button>
+        </div>
+        <div class="cloud-status">
+            <span id="estadoBdi" class="status-text" style="color: #e53e3e;">⚠️ Sin BDI Local</span>
+            <div id="badgeSync" class="sync-badge">☁️ Sincronizando datos...</div>
+        </div>
+    </div>
+
+    <input type="file" id="bdiInput" accept=".xlsx, .xls, .csv" style="display: none;">
+    <input type="file" id="fileSiprem" accept=".xlsx, .xls, .csv" style="display: none;">
+    <input type="file" id="fileCasuistica" accept=".xlsx, .xls, .csv" style="display: none;">
+
+    <div class="drop-grid">
+        <div class="upload-zone zone-casuistica" id="dropCasuistica">
+            <div class="drop-title" id="msgCasuistica">Esperando Casuística...</div>
+            <div class="drop-subtitle" id="subMsgCasuistica">Carga automática desde GitHub habilitada</div>
+        </div>
+        <div class="upload-zone zone-siprem" id="dropSiprem">
+            <div class="drop-title" id="msgSiprem">Esperando SIPREM...</div>
+            <div class="drop-subtitle" id="subMsgSiprem">Carga automática desde GitHub habilitada</div>
+        </div>
+    </div>
+
+    <div id="dashboardContent" style="display: none;">
+        
+        <div class="kpi-container">
+            <div class="kpi-card"><span class="kpi-title">Pendientes Totales</span><span class="kpi-value" id="kpiTotal">0</span></div>
+            <div class="kpi-card success"><span class="kpi-title">Asignadas a Brigada</span><span class="kpi-value" id="kpiAsignadas">0</span></div>
+            <div class="kpi-card warning"><span class="kpi-title">Bolsa Disponible (Limpias)</span><span class="kpi-value" id="kpiSinAsignar">0</span></div>
+            <div class="kpi-card danger"><span class="kpi-title">Con Casuística / Traba</span><span class="kpi-value" id="kpiCasuistica">0</span></div>
+        </div>
+
+        <!-- RESUMEN MATRIZ 1: ANTIGÜEDAD TOTAL (PENDIENTES TOTALES) -->
+        <div class="section-title">
+            <span>📅 Resumen 1: Matriz de Antigüedad - Órdenes Totales Pendientes por Ejecutar</span>
+            <button class="btn-exportar btn-info" onclick="capturarPantalla('boxCapturaMatrizAntiguedad', 'MATRIZ_ANTIGUEDAD_TOTAL')">📸 Capturar Resumen</button>
+        </div>
+        <div id="boxCapturaMatrizAntiguedad" class="tech-filter-zone screenshot-target">
+            <table id="tableMatrizAntiguedad" class="main-table">
+                <thead>
+                    <tr>
+                        <th style="text-align:left;">Proceso / Naturaleza</th>
+                        <th>1d</th>
+                        <th>2d</th>
+                        <th>3d</th>
+                        <th>4d</th>
+                        <th>5~9d</th>
+                        <th>10~20d</th>
+                        <th>>20d</th>
+                        <th>TOTAL</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <!-- RESUMEN MATRIZ 2: ASIGNACIÓN POR ACTIVIDAD/DESCRIPCIÓN -->
+        <div class="section-title">
+            <span>📋 Resumen 2: Matriz de Asignaciones por Actividades (Descripción de OS)</span>
+            <button class="btn-exportar btn-info" onclick="capturarPantalla('boxCapturaMatrizActividades', 'MATRIZ_ACTIVIDADES_TECNICOS')">📸 Capturar Resumen</button>
+        </div>
+        <div id="boxCapturaMatrizActividades" class="tech-filter-zone screenshot-target" style="overflow-x:auto;">
+            <table id="tableMatrizActividades" class="main-table">
+                <thead></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="section-title">📸 Módulo 1: Control Individual por Cuadrilla</div>
+        <div class="tech-filter-zone">
+            <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                <div>
+                    <select id="selectTecnicoFiltro" class="filtro-select" style="width: 280px;" onchange="filtrarDetalleTecnico()">
+                        <option value="">-- Seleccione un Técnico --</option>
+                    </select>
+                </div>
+                <div class="tech-actions" style="margin-top:0;">
+                    <button class="btn-exportar" onclick="exportarExcelTecnicoIndividual()">📥 Descargar Excel</button>
+                    <button class="btn-exportar btn-info" onclick="capturarPantalla('boxCapturaTecnico', 'CUADRILLA')">📸 Generar Capture</button>
+                </div>
+            </div>
+
+            <div id="boxCapturaTecnico" class="screenshot-target">
+                <div style="display:flex; justify-content:space-between; border-bottom: 2px solid var(--primary); padding-bottom: 5px; margin-bottom: 10px;">
+                    <h3 id="txtNombreTecnicoCaptura" style="margin:0; color: var(--primary); font-size:14px; text-transform:uppercase;">TÉCNICO: NO SELECCIONADO</h3>
+                    <span id="txtKpisTecnicoCaptura" style="font-weight:bold; font-size:12px; color:#4a5568;">OS Totales: 0 | Max Antigüedad: 0d</span>
+                </div>
+                <table id="tableDetalleIndividual" class="main-table" style="table-layout: auto;">
+                    <thead><tr><th>OS</th><th>Municipio</th><th>Barrio</th><th>TO</th><th>Días</th><th>Estado / Traba</th><th>Observación</th></tr></thead>
+                    <tbody><tr><td colspan="7" style="text-align:center; padding:15px;">Selecciona una cuadrilla</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section-title">👷 Módulo 2: Resumen Carga de Trabajo General Brigadas</div>
+        <div class="tech-filter-zone">
+            <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
+                <div>
+                    <label style="font-size: 11px; font-weight: bold; color: var(--primary);">Filtrar por Naturaleza/Proceso:</label>
+                    <select id="filtroProcesoBrigadas" class="filtro-select" onchange="renderTecnicosTbl()">
+                        <option value="TODOS">Todas las Naturalezas</option>
+                        <option value="PQR">PQR</option>
+                        <option value="CAMPAÑAS">Campañas</option>
+                        <option value="DAÑOS">Daños</option>
+                        <option value="NUEVAS CONEXIONES">Nuevas Conexiones</option>
+                    </select>
+                </div>
+                <div class="tech-actions" style="margin-top:0;">
+                    <button class="btn-exportar" onclick="exportarDetalleBrigadasFiltro()">📥 Descargar Filtro</button>
+                    <button class="btn-exportar btn-info" onclick="capturarPantalla('boxCapturaCargaGeneral', 'CARGA_GENERAL')">📸 Capturar Resumen</button>
+                </div>
+            </div>
+
+            <div id="boxCapturaCargaGeneral" class="screenshot-target">
+                <h3 id="tituloCargaGeneral" style="margin:0 0 10px 0; color: var(--primary); font-size:14px; border-bottom: 2px solid #edf2f7; padding-bottom: 4px;">RESUMEN GENERAL DE BRIGADAS</h3>
+                <div class="table-card wide-card" style="box-shadow:none; padding:0; border:none;">
+                    <table id="tableTecnicos" class="main-table">
+                        <thead><tr><th>Técnico / Cuadrilla</th><th>PQR</th><th>Campañas</th><th>Daños</th><th>Nuevas C.</th><th>Total OS</th><th>Antigüedad Máx</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-title">🔴 Top 15 Órdenes Más Antiguas Asignadas (Incluye Trabas Asignadas)</div>
+        <div class="top10-container">
+            <div id="top15-DAÑOS" class="top10-card"></div>
+            <div id="top15-CAMPAÑAS" class="top10-card"></div>
+            <div id="top15-NUEVAS CONEXIONES" class="top10-card"></div>
+            <div id="top15-PQR" class="top10-card"></div>
+        </div>
+
+        <div class="tables-grid-3">
+            <div class="table-card" id="boxCapturaBolsa">
+                <div class="chart-header">
+                    <span>📍 OS LIMPIAS (Bolsa)</span>
+                    <div>
+                        <button class="btn-exportar btn-info" style="padding:3px 8px; font-size:10px;" onclick="capturarPantalla('boxCapturaBolsa', 'BOLSA_LIBRE')">📸 Cap</button>
+                        <button class="btn-exportar" style="padding:3px 8px; font-size:10px; margin-left:5px;" onclick="exportarOsLimpias()">📥 Excel</button>
+                    </div>
+                </div>
+                <select id="filtroOsLimpias" class="filtro-select" style="width:100%; margin-bottom:8px;" onchange="renderOsLimpias()">
+                    <option value="TODAS">Todos los Procesos</option>
+                    <option value="PQR">PQR</option>
+                    <option value="CAMPAÑAS">Campañas</option>
+                    <option value="DAÑOS">Daños</option>
+                    <option value="NUEVAS CONEXIONES">Nuevas Conex.</option>
+                </select>
+                <table id="tableDisponibles" class="main-table">
+                    <thead><tr><th style="text-align:left;">Municipio/Barrio</th><th style="text-align:left;">Tipo / Proceso</th><th style="text-align:left;">Órdenes (OS)</th><th style="width:45px;">Días</th><th style="width:30px;">Q</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            
+            <div class="table-card">
+                <div class="chart-header">
+                    <span>⚠️ OS TRABADAS</span>
+                    <button class="btn-exportar" style="padding:3px 8px; font-size:10px;" onclick="exportarOsTrabadas()">📥 Excel</button>
+                </div>
+                <table id="tableCasuistica" class="main-table">
+                    <thead><tr><th style="text-align:left;">Barrio</th><th>Tipo</th><th style="text-align:left;">Motivo Traba</th><th style="text-align:left;">Órdenes (OS)</th><th style="width:45px;">Días</th><th style="width:30px;">Q</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            
+            <div class="table-card">
+                <div class="chart-header">
+                    <span>🎯 NÚCLEOS</span>
+                    <button class="btn-exportar btn-danger" style="padding:3px 8px; font-size:10px;" onclick="exportarSinNucleo()">📥 Error</button>
+                </div>
+                <table id="tableCampanasIng" class="main-table">
+                    <thead><tr><th style="text-align:left;">Ingeniero</th><th style="width:40px;">Cant</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const GITHUB_USER = "vikano27-debug";
+    const GITHUB_REPO = "Dashboard_ING_VOA";
+    const GITHUB_BRANCH = "main";
+    const INTERVALO_REFRESH = 15 * 60 * 1000; 
+
+    const S = v => v === null || v === undefined ? "" : String(v).trim();
+    const U = v => S(v).toUpperCase();
+    const UN = v => U(v).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const NUM = v => S(v).replace(/[^0-9\-]/g, ""); 
+    const ALPHANUM = v => UN(v).replace(/[^A-Z0-9]/g, "");
+
+    let casuisticaMap = new Map();
+    let bdiMap = {};
+    let tiposOsMap = {};
+    
+    let rawSipremData = [];
+    let baseMinableData = []; 
+    let datosDisponiblesLimpias = {};
+    let datosCasuisticaTbl = {}; 
+    let nucleosObj = {};
+    let listadoSinNucleo = [];
+    let conteoTotalProceso = {};
+    let mapaAsignacionesTecnicos = {};
+    let tecnicosObj = {};
+
+    let matrizAntiguedadBolsa = {};
+    let matrizActividadesTecnicos = {};
+    let setActividadesList = new Set();
+
+    try {
+        if(localStorage.getItem('bdi_v15')) bdiMap = JSON.parse(localStorage.getItem('bdi_v15'));
+        if(localStorage.getItem('tipos_v15')) tiposOsMap = JSON.parse(localStorage.getItem('tipos_v15'));
+        actualizarEstadosUI();
+    } catch(e){}
+
+    function actualizarEstadosUI() {
+        let bCount = Object.keys(bdiMap).length;
+        let lbl = document.getElementById('estadoBdi');
+        if(bCount > 0) { 
+            lbl.innerText = `🧠 BDI Activa: ${bCount} Barrios`; 
+            lbl.style.color = '#38a169'; 
+        } else {
+            lbl.innerText = `⚠️ Sin BDI Activa`;
+            lbl.style.color = '#e53e3e';
+        }
+    }
+
+    function procesarBdiArrayBuffer(arrayBuffer) {
+        let wb = XLSX.read(new Uint8Array(arrayBuffer), {type:'array'});
+        bdiMap = {};
+        tiposOsMap = {};
+        wb.SheetNames.forEach(name => {
+            let rows = XLSX.utils.sheet_to_json(wb.Sheets[name], {defval:""});
+            rows.forEach(r => {
+                let cleanR = {};
+                for(let k in r) { cleanR[ALPHANUM(k)] = U(r[k]); }
+                let bKey = Object.keys(cleanR).find(k => ["NOMLOCAL", "LOCALIDAD", "BARRIO"].includes(k));
+                let iKey = Object.keys(cleanR).find(k => ["INGAIRE", "INGENIERO", "NUCLEO"].includes(k));
+                if(bKey && iKey) { bdiMap[ALPHANUM(cleanR[bKey])] = cleanR[iKey]; }
+                let tKey = Object.keys(cleanR).find(k => ["TIPO", "TIPORDEN", "TO"].includes(k));
+                let dKey = Object.keys(cleanR).find(k => ["DESCTIPO", "DESCRIPCION"].includes(k));
+                let nKey = Object.keys(cleanR).find(k => ["NATURALEZA", "PROCESO"].includes(k));
+                if(tKey && dKey) { tiposOsMap[cleanR[tKey]] = { desc: cleanR[dKey], nat: nKey ? cleanR[nKey] : "" }; }
+            });
+        });
+        localStorage.setItem('bdi_v15', JSON.stringify(bdiMap));
+        localStorage.setItem('tipos_v15', JSON.stringify(tiposOsMap));
+        actualizarEstadosUI();
+    }
+
+    async function cargarDatosDesdeGithub() {
+        let badge = document.getElementById('badgeSync');
+        badge.className = "sync-badge loading";
+        badge.innerText = "☁️ Conectando con GitHub...";
+
+        let ts = new Date().getTime(); 
+        let urlBdi = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/bdi_latest.xlsx?t=${ts}`;
+        let urlCasuistica = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/casuistica_latest.csv?t=${ts}`;
+        let urlSiprem = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/siprem_latest.xlsx?t=${ts}`;
+
+        try {
+            try {
+                let resBdi = await fetch(urlBdi);
+                if(resBdi.ok) {
+                    let abBdi = await resBdi.arrayBuffer();
+                    procesarBdiArrayBuffer(abBdi);
+                } else {
+                    actualizarEstadosUI();
+                }
+            } catch(eBdi) {
+                console.warn("BDI no encontrada en la nube, usando localstorage.", eBdi);
+                actualizarEstadosUI();
+            }
+
+            document.getElementById('msgCasuistica').innerText = "⏳ Descargando CSV de la nube...";
+            let resCas = await fetch(urlCasuistica);
+            if(resCas.ok) {
+                let abCas = await resCas.arrayBuffer();
+                let wbCas = XLSX.read(new Uint8Array(abCas), {type:'array'});
+                let rowsCas = XLSX.utils.sheet_to_json(wbCas.Sheets[wbCas.SheetNames[0]], {defval:""});
+                procesarDatosCasuisticaDirecto(rowsCas);
+            }
+
+            document.getElementById('msgSiprem').innerText = "⏳ Descargando XLSX de la nube...";
+            let resSip = await fetch(urlSiprem);
+            if(resSip.ok) {
+                let abSip = await resSip.arrayBuffer();
+                let wbSip = XLSX.read(new Uint8Array(abSip), {range: 4, defval:""});
+                let rowsSip = XLSX.utils.sheet_to_json(wbSip.Sheets[wbSip.SheetNames[0]], {range: 4, defval:""});
+                rawSipremData = rowsSip;
+                
+                document.getElementById('msgSiprem').innerText = `✅ SIPREM Conectado (Nube)`;
+                document.getElementById('subMsgSiprem').innerText = `Última lectura exitosa`;
+                document.getElementById('dropSiprem').style.backgroundColor = '#bfdbfe';
+                document.getElementById('dropSiprem').style.borderColor = '#3b82f6';
+                
+                analizarDatos(rawSipremData);
+            } else {
+                throw new Error("SIPREM no encontrado 404");
+            }
+
+            let hora = new Date().toLocaleTimeString();
+            badge.className = "sync-badge";
+            badge.style.backgroundColor = "#c6f6d5";
+            badge.style.borderColor = "#38a169";
+            badge.style.color = "#22543d";
+            badge.innerText = `✅ 100% Sincronizado (${hora})`;
+
+        } catch(e) {
+            console.error("Error nube:", e);
+            badge.className = "sync-badge";
+            badge.style.backgroundColor = "#fed7d7";
+            badge.style.borderColor = "#e53e3e";
+            badge.style.color = "#c53030";
+            badge.innerText = `❌ Error de red / Esperando robot`;
+        }
+    }
+
+    window.onload = () => {
+        cargarDatosDesdeGithub();
+        setInterval(cargarDatosDesdeGithub, INTERVALO_REFRESH);
+    };
+
+    function procesarDatosCasuisticaDirecto(rows) {
+        let contador = 0;
+        casuisticaMap.clear();
+        rows.forEach(r => {
+            let rClean = {};
+            for(let k in r) { rClean[ALPHANUM(k)] = S(r[k]); }
+            let osKey = Object.keys(rClean).find(k => ["ORDEN", "OS", "CUENTADEORDEN", "NUMERO"].includes(k));
+            let motKey = Object.keys(rClean).find(k => ["MOTIVO", "TRABA", "CASUISTICA", "DETALLE", "ESTADO"].includes(k));
+            if(osKey) {
+                let osNum = NUM(rClean[osKey]).replace("-", "");
+                let motivo = motKey ? U(rClean[motKey]) : "EN REVISION";
+                if(osNum && osNum.length >= 5) { casuisticaMap.set(osNum, motivo); contador++; }
+            }
+        });
+        document.getElementById('msgCasuistica').innerText = `✅ Trabas en Nube (${contador})`;
+        document.getElementById('dropCasuistica').style.backgroundColor = '#d9f99d';
+        document.getElementById('dropCasuistica').style.borderColor = '#84cc16';
+    }
+
+    document.getElementById('bdiInput').addEventListener('change', function(e) {
+        if(!e.target.files.length) return;
+        let reader = new FileReader();
+        reader.onload = (ev) => {
+            procesarBdiArrayBuffer(ev.target.result);
+            alert("✅ BDI actualizado localmente en este navegador.");
+            if(rawSipremData.length > 0) analizarDatos(rawSipremData);
+        };
+        reader.readAsArrayBuffer(e.target.files[0]);
+    });
+
+    const dropCasuistica = document.getElementById('dropCasuistica');
+    dropCasuistica.addEventListener('click', () => document.getElementById('fileCasuistica').click());
+    dropCasuistica.addEventListener('dragover', e => e.preventDefault());
+    dropCasuistica.addEventListener('drop', e => { e.preventDefault(); if(e.dataTransfer.files.length) procesarArchivoManualCasuistica(e.dataTransfer.files[0]); });
+    document.getElementById('fileCasuistica').addEventListener('change', e => { if(e.target.files.length) procesarArchivoManualCasuistica(e.target.files[0]); });
+
+    function procesarArchivoManualCasuistica(file) {
+        let reader = new FileReader();
+        reader.onload = (e) => {
+            let wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+            let rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {defval:""});
+            procesarDatosCasuisticaDirecto(rows);
+            if(rawSipremData.length > 0) analizarDatos(rawSipremData);
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    const dropSiprem = document.getElementById('dropSiprem');
+    dropSiprem.addEventListener('click', () => document.getElementById('fileSiprem').click());
+    dropSiprem.addEventListener('dragover', e => e.preventDefault());
+    dropSiprem.addEventListener('drop', e => { e.preventDefault(); if(e.dataTransfer.files.length) prepararSipremManual(e.dataTransfer.files[0]); });
+    document.getElementById('fileSiprem').addEventListener('change', e => { if(e.target.files.length) prepararSipremManual(e.target.files[0]); });
+
+    function prepararSipremManual(file) {
+        let reader = new FileReader();
+        reader.onload = (e) => {
+            let wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+            let rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {range: 4, defval:""});
+            rawSipremData = rows;
+            analizarDatos(rows);
+            document.getElementById('msgSiprem').innerText = `✅ SIPREM Manual Procesado`;
+            dropSiprem.style.backgroundColor = '#bfdbfe';
+            dropSiprem.style.borderColor = '#3b82f6';
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function buscarIngenieroSoftMatch(barrio) {
+        let c = ALPHANUM(barrio);
+        if(!c) return "SIN NUCLEO";
+        if(bdiMap[c]) return bdiMap[c];
+        let coincidencia = Object.keys(bdiMap).find(k => c.includes(k) || k.includes(c));
+        return coincidencia ? bdiMap[coincidencia] : "SIN NUCLEO";
+    }
+
+    function clasificarProceso(to, desc, nat) {
+        let m = U(to + " " + desc + " " + nat);
+        if(m.includes("TO811") || m.includes("DAÑO") || m.includes("DANO")) return "DAÑOS";
+        if(["TO250","TO253","TO255","TO279","TO283","TO280"].some(x => m.includes(x)) || m.includes("CAMP")) return "CAMPAÑAS";
+        if(["TO102","TO150","TO151","TO152","TO153","TO154","TO155","TO156","TO157"].some(x => m.includes(x)) || m.includes("NUEV") || m.includes("CONEX") || m.includes("INSTALAC")) return "NUEVAS CONEXIONES";
+        return "PQR";
+    }
+
+    function analizarDatos(rows) {
+        let total = 0, asignadas = 0, limpias = 0, trabadas = 0;
+        let top15Listas = { "DAÑOS":[], "CAMPAÑAS":[], "NUEVAS CONEXIONES":[], "PQR":[] };
+        
+        datosDisponiblesLimpias = {};
+        datosCasuisticaTbl = {}; 
+        nucleosObj = {};
+        listadoSinNucleo = [];
+        mapaAsignacionesTecnicos = {};
+        tecnicosObj = {}; 
+        baseMinableData = [];
+        conteoTotalProceso = { "DAÑOS":0, "CAMPAÑAS":0, "NUEVAS CONEXIONES":0, "PQR":0 };
+
+        matrizAntiguedadBolsa = {
+            "CAMPAÑAS": { "1":0, "2":0, "3":0, "4":0, "5~9":0, "10~20":0, ">20":0, "total":0 },
+            "PQR": { "1":0, "2":0, "3":0, "4":0, "5~9":0, "10~20":0, ">20":0, "total":0 },
+            "DAÑOS": { "1":0, "2":0, "3":0, "4":0, "5~9":0, "10~20":0, ">20":0, "total":0 },
+            "NUEVAS CONEXIONES": { "1":0, "2":0, "3":0, "4":0, "5~9":0, "10~20":0, ">20":0, "total":0 }
+        };
+
+        matrizActividadesTecnicos = {};
+        setActividadesList = new Set();
+
+        rows.forEach(row => {
+            let r = {};
+            for(let k in row) { r[ALPHANUM(k)] = S(row[k]); }
+            
+            let osKey = Object.keys(r).find(k => ["ORDEN", "OS", "CUENTADEORDEN"].includes(k));
+            if(!osKey) return;
+            let os = r[osKey]; let osClean = NUM(os).replace("-", ""); total++;
+
+            let tecRaw = r[Object.keys(r).find(k => ["TECNICO", "OPERARIO", "BRIGADA"].includes(k))] || "NO ASIGNADO";
+            let tecUpper = U(tecRaw).replace(/[^A-Z]/g, '');
+            let esAsignada = !(tecUpper.includes("NOASIGNAD") || tecUpper.includes("SINASIGNAR") || tecUpper === "");
+
+            let barrio = r[Object.keys(r).find(k => ["LOCALIDAD", "BARRIO", "NOMLOCAL"].includes(k))] || "SIN BARRIO";
+            let mun = r[Object.keys(r).find(k => ["MUNICIPIO", "CIUDAD"].includes(k))] || "CENTRO";
+            let ant = parseInt(NUM(r[Object.keys(r).find(k => ["ANTIGUEDAD", "DIAS"].includes(k))]), 10) || 0;
+            let comentario = r[Object.keys(r).find(k => ["COMENTARIO", "OBSERVACION"].includes(k))] || "Sin observaciones";
+
+            let to = r[Object.keys(r).find(k => ["TIPO", "TIPORDEN", "TO"].includes(k))];
+            let dic = tiposOsMap[to] || { desc: U(r[Object.keys(r).find(k => ["DESCRIPCION", "ACTIVIDAD", "DESCTIPO"].includes(k))]), nat: "" };
+            let proceso = clasificarProceso(to, dic.desc, dic.nat);
+
+            conteoTotalProceso[proceso]++;
+            let ing = buscarIngenieroSoftMatch(barrio);
+            
+            let traba = casuisticaMap.get(osClean) || "";
+            let esTrabada = !!traba;
+
+            // Matriz de Antigüedad para TODAS LAS ÓRDENES (Backlog Total)
+            let bK = "1";
+            if(ant <= 1) bK = "1"; // 0 o 1 caen acá
+            else if(ant === 2) bK = "2";
+            else if(ant === 3) bK = "3";
+            else if(ant === 4) bK = "4";
+            else if(ant >= 5 && ant <= 9) bK = "5~9";
+            else if(ant >= 10 && ant <= 20) bK = "10~20";
+            else bK = ">20";
+
+            if(matrizAntiguedadBolsa[proceso]) {
+                matrizAntiguedadBolsa[proceso][bK]++;
+                matrizAntiguedadBolsa[proceso]["total"]++;
+            }
+
+            // Conteo de Trabas Generales (Asignadas o No Asignadas)
+            if(esTrabada) {
+                trabadas++;
+                let keyC = `${barrio}|${traba}|${to}`;
+                if(!datosCasuisticaTbl[keyC]) datosCasuisticaTbl[keyC] = { b: barrio, m: traba, to: to || "S/T", c: 0, maxAnt: 0, osList: [] };
+                datosCasuisticaTbl[keyC].c++;
+                if(ant > datosCasuisticaTbl[keyC].maxAnt) datosCasuisticaTbl[keyC].maxAnt = ant;
+                datosCasuisticaTbl[keyC].osList.push(os);
+            }
+
+            if(esAsignada) {
+                asignadas++;
+                let registroOrden = { 
+                    os: os, tec: tecRaw, municipio: mun, barrio: barrio, ant: ant, 
+                    to: to, descTo: dic.desc, coment: comentario, proceso: proceso, traba: traba
+                };
+
+                top15Listas[proceso].push(registroOrden);
+
+                if(!mapaAsignacionesTecnicos[tecRaw]) mapaAsignacionesTecnicos[tecRaw] = [];
+                mapaAsignacionesTecnicos[tecRaw].push(registroOrden);
+
+                if(!tecnicosObj[tecRaw]) tecnicosObj[tecRaw] = { pqr:0, camp:0, dan:0, nvc:0, tot:0, max:0 };
+                tecnicosObj[tecRaw].tot++;
+                if(ant > tecnicosObj[tecRaw].max) tecnicosObj[tecRaw].max = ant;
+                if(proceso === "PQR") tecnicosObj[tecRaw].pqr++;
+                if(proceso === "CAMPAÑAS") tecnicosObj[tecRaw].camp++;
+                if(proceso === "DAÑOS") tecnicosObj[tecRaw].dan++;
+                if(proceso === "NUEVAS CONEXIONES") tecnicosObj[tecRaw].nvc++;
+
+                // Registro Matriz Actividades (Para las Asignadas)
+                let descClean = dic.desc || to || "OTRA ACTIVIDAD";
+                setActividadesList.add(descClean);
+                if(!matrizActividadesTecnicos[tecRaw]) matrizActividadesTecnicos[tecRaw] = {};
+                matrizActividadesTecnicos[tecRaw][descClean] = (matrizActividadesTecnicos[tecRaw][descClean] || 0) + 1;
+            } 
+            else {
+                // Es "No asignado". Verificamos si es limpia para la tabla de Bolsa
+                if(!esTrabada) {
+                    limpias++;
+                    let keyL = `${mun}|${barrio}|${proceso}|${dic.desc}`;
+                    if(!datosDisponiblesLimpias[keyL]) datosDisponiblesLimpias[keyL] = { m: mun, b: barrio, p: proceso, d: dic.desc, c: 0, maxAnt: 0, osList: [] };
+                    datosDisponiblesLimpias[keyL].c++;
+                    if(ant > datosDisponiblesLimpias[keyL].maxAnt) datosDisponiblesLimpias[keyL].maxAnt = ant;
+                    datosDisponiblesLimpias[keyL].osList.push(os);
+                }
+
+                // Registro Matriz Actividades (¡AQUÍ ESTÁ LA CORRECCIÓN!)
+                // Ahora suma TODAS las no asignadas a la Matriz 2 (limpias y trabadas)
+                let descClean = dic.desc || to || "OTRA ACTIVIDAD";
+                setActividadesList.add(descClean);
+                if(!matrizActividadesTecnicos["No asignado"]) matrizActividadesTecnicos["No asignado"] = {};
+                matrizActividadesTecnicos["No asignado"][descClean] = (matrizActividadesTecnicos["No asignado"][descClean] || 0) + 1;
+            }
+
+            if(!nucleosObj[ing]) nucleosObj[ing] = 0;
+            nucleosObj[ing]++;
+            if(ing === "SIN NUCLEO") listadoSinNucleo.push({ "OS": os, "Municipio": mun, "Barrio": barrio, "Proceso": proceso, "Técnico": tecRaw });
+
+            // Dataset Minable Completo para Exportación
+            baseMinableData.push({
+                "OS": os,
+                "Municipio": mun,
+                "Barrio": barrio,
+                "Ingeniero_Nucleo": ing,
+                "Tipo_TO": to || "S/T",
+                "Actividad_Descripcion": dic.desc || "S/D",
+                "Proceso_Naturaleza": proceso,
+                "Tecnico_Asignado": tecRaw,
+                "Estado_Asignacion": esAsignada ? "ASIGNADO" : "BOLSA / DISPONIBLE",
+                "Tiene_Traba": esTrabada ? "SI" : "NO",
+                "Motivo_Traba": traba || "NINGUNA",
+                "Antiguedad_Dias": ant,
+                "Comentarios": comentario
+            });
+        });
+
+        document.getElementById('kpiTotal').innerText = total;
+        document.getElementById('kpiAsignadas').innerText = asignadas;
+        document.getElementById('kpiSinAsignar').innerText = limpias;
+        document.getElementById('kpiCasuistica').innerText = trabadas;
+
+        let selectTech = document.getElementById('selectTecnicoFiltro');
+        selectTech.innerHTML = '<option value="">-- Seleccione un Técnico --</option>';
+        Object.keys(mapaAsignacionesTecnicos).sort().forEach(t => {
+            selectTech.innerHTML += `<option value="${t}">${t} (${mapaAsignacionesTecnicos[t].length} OS)</option>`;
+        });
+
+        renderMatrizAntiguedadBolsa();
+        renderMatrizActividades();
+        renderTablerosTop15(top15Listas);
+        renderOsLimpias();
+        renderCasuisticaTbl(); 
+        renderNucleosTbl();
+        renderTecnicosTbl(); 
+        filtrarDetalleTecnico();
+
+        document.getElementById('dashboardContent').style.display = 'block';
+    }
+
+    // RESUMEN 1: MATRIZ DE ANTIGÜEDAD BOLSA (Total Pendientes)
+    function renderMatrizAntiguedadBolsa() {
+        let tbody = document.querySelector('#tableMatrizAntiguedad tbody');
+        let html = "";
+        let tot = { "1":0, "2":0, "3":0, "4":0, "5~9":0, "10~20":0, ">20":0, "total":0 };
+
+        ["CAMPAÑAS", "PQR", "DAÑOS", "NUEVAS CONEXIONES"].forEach(p => {
+            let row = matrizAntiguedadBolsa[p] || { "1":0, "2":0, "3":0, "4":0, "5~9":0, "10~20":0, ">20":0, "total":0 };
+            tot["1"] += row["1"]; tot["2"] += row["2"]; tot["3"] += row["3"]; tot["4"] += row["4"];
+            tot["5~9"] += row["5~9"]; tot["10~20"] += row["10~20"]; tot[">20"] += row[">20"]; tot["total"] += row["total"];
+
+            html += `<tr>
+                <td style="text-align:left; font-weight:bold;">${p}</td>
+                <td>${row["1"] || ''}</td>
+                <td>${row["2"] || ''}</td>
+                <td>${row["3"] || ''}</td>
+                <td>${row["4"] || ''}</td>
+                <td>${row["5~9"] || ''}</td>
+                <td>${row["10~20"] || ''}</td>
+                <td>${row[">20"] || ''}</td>
+                <td style="font-weight:bold; background:#edf2f7;">${row["total"] || 0}</td>
+            </tr>`;
+        });
+
+        html += `<tr class="total-row">
+            <td style="text-align:left;">TOTAL PENDIENTES</td>
+            <td>${tot["1"]}</td>
+            <td>${tot["2"]}</td>
+            <td>${tot["3"]}</td>
+            <td>${tot["4"]}</td>
+            <td>${tot["5~9"]}</td>
+            <td>${tot["10~20"]}</td>
+            <td>${tot[">20"]}</td>
+            <td>${tot["total"]}</td>
+        </tr>`;
+
+        tbody.innerHTML = html;
+    }
+
+    // RESUMEN 2: MATRIZ DE ACTIVIDADES / DESCRIPCIÓN POR TÉCNICO
+    function renderMatrizActividades() {
+        let thead = document.querySelector('#tableMatrizActividades thead');
+        let tbody = document.querySelector('#tableMatrizActividades tbody');
+
+        let actArray = Array.from(setActividadesList).sort();
+        if(actArray.length === 0) {
+            thead.innerHTML = ""; tbody.innerHTML = "<tr><td style='text-align:center;'>Sin información</td></tr>"; return;
+        }
+
+        let headerHtml = `<tr><th style="text-align:left; min-width:180px;">TÉCNICO / BRIGADA</th>`;
+        actArray.forEach(act => {
+            headerHtml += `<th style="min-width:130px; font-size:9.5px; white-space:normal; word-break:break-word; vertical-align:middle; padding:8px 4px;" title="${act}">${act}</th>`;
+        });
+        headerHtml += `<th style="min-width:60px;">TOTAL</th></tr>`;
+        thead.innerHTML = headerHtml;
+
+        let techList = Object.keys(matrizActividadesTecnicos).sort();
+        if(techList.includes("No asignado")) {
+            techList = ["No asignado", ...techList.filter(t => t !== "No asignado")];
+        }
+
+        let colTotals = {};
+        actArray.forEach(a => colTotals[a] = 0);
+        let grandTotal = 0;
+
+        let bodyHtml = "";
+        techList.forEach(tech => {
+            let rowTotal = 0;
+            let isNoAsig = tech === "No asignado";
+            bodyHtml += `<tr ${isNoAsig ? 'style="background:#fff5f5; font-weight:bold;"' : ''}>
+                <td style="text-align:left; ${isNoAsig ? 'color:#c53030;' : ''}">${tech}</td>`;
+
+            actArray.forEach(act => {
+                let cnt = matrizActividadesTecnicos[tech][act] || 0;
+                rowTotal += cnt;
+                colTotals[act] += cnt;
+                bodyHtml += `<td>${cnt > 0 ? cnt : ''}</td>`;
+            });
+
+            grandTotal += rowTotal;
+            bodyHtml += `<td style="font-weight:bold; background:#edf2f7;">${rowTotal}</td></tr>`;
+        });
+
+        bodyHtml += `<tr class="total-row">
+            <td style="text-align:left;">TOTAL GENERAL</td>`;
+        actArray.forEach(act => {
+            bodyHtml += `<td>${colTotals[act]}</td>`;
+        });
+        bodyHtml += `<td>${grandTotal}</td></tr>`;
+
+        tbody.innerHTML = bodyHtml;
+    }
+
+    // EXPORTACIÓN BASE MINABLE COMPLETA
+    function exportarBaseMinableCompleta() {
+        if(!baseMinableData || baseMinableData.length === 0) return alert("❌ No hay datos cargados para exportar.");
+        let ws = XLSX.utils.json_to_sheet(baseMinableData);
+        let wb = XLSX.utils.book_new(); 
+        XLSX.utils.book_append_sheet(wb, ws, "Base_Minable_OS");
+        XLSX.writeFile(wb, `BASE_MINABLE_DELTEC_${new Date().toISOString().slice(0,10)}.xlsx`);
+    }
+
+    function renderTecnicosTbl() {
+        let filtro = document.getElementById('filtroProcesoBrigadas').value;
+        let tbody = document.querySelector('#tableTecnicos tbody');
+        let titulo = filtro === "TODOS" ? "RESUMEN GENERAL DE BRIGADAS" : `RESUMEN GENERAL - FILTRADO POR ${filtro}`;
+        document.getElementById('tituloCargaGeneral').innerText = titulo;
+
+        let data = Object.keys(tecnicosObj).map(k => ({ nombre: k, ...tecnicosObj[k] }));
+        if (filtro !== "TODOS") {
+            data = data.filter(t => {
+                if (filtro === "PQR") return t.pqr > 0;
+                if (filtro === "CAMPAÑAS") return t.camp > 0;
+                if (filtro === "DAÑOS") return t.dan > 0;
+                if (filtro === "NUEVAS CONEXIONES") return t.nvc > 0;
+                return true;
+            });
+        }
+
+        data.sort((a,b) => b.tot - a.tot);
+        let html = data.map(t => `<tr>
+            <td style="text-align:left;"><b>${t.nombre}</b></td>
+            <td>${t.pqr > 0 && filtro==="PQR" ? `<span class="badge badge-blue">${t.pqr}</span>` : t.pqr}</td>
+            <td>${t.camp > 0 && filtro==="CAMPAÑAS" ? `<span class="badge badge-blue">${t.camp}</span>` : t.camp}</td>
+            <td>${t.dan > 0 && filtro==="DAÑOS" ? `<span class="badge badge-blue">${t.dan}</span>` : t.dan}</td>
+            <td>${t.nvc > 0 && filtro==="NUEVAS CONEXIONES" ? `<span class="badge badge-blue">${t.nvc}</span>` : t.nvc}</td>
+            <td><span class="badge badge-dark">${t.tot}</span></td>
+            <td><span class="badge badge-yellow">${t.max} días</span></td>
+        </tr>`).join("");
+        
+        tbody.innerHTML = html || `<tr><td colspan="7" style="text-align:center; padding:10px;">No hay brigadas con este tipo de OS asignadas.</td></tr>`;
+    }
+
+    function exportarDetalleBrigadasFiltro() {
+        let filtro = document.getElementById('filtroProcesoBrigadas').value;
+        let dataToExport = [];
+        for(let tec in mapaAsignacionesTecnicos) {
+            let ordenes = mapaAsignacionesTecnicos[tec];
+            ordenes.forEach(o => {
+                if (filtro === "TODOS" || o.proceso === filtro) {
+                    dataToExport.push({ "Técnico": o.tec, "Proceso": o.proceso, "OS": o.os, "Municipio": o.municipio, "Barrio": o.barrio, "Código TO": o.to, "Actividad": o.descTo, "Días": o.ant, "Traba": o.traba || "NINGUNA", "Comentarios": o.coment });
+                }
+            });
+        }
+        if(dataToExport.length === 0) return alert("❌ No hay órdenes para exportar con este filtro.");
+        let ws = XLSX.utils.json_to_sheet(dataToExport);
+        let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "OS_Filtradas");
+        XLSX.writeFile(wb, `EXTRACTO_OS_${filtro.replace(/[^A-Z0-9]/gi, '_')}.xlsx`);
+    }
+
+    function capturarPantalla(elementId, nombreArchivo) {
+        let target = document.getElementById(elementId);
+        html2canvas(target, { scale: 2, logging: false, useCORS: true, backgroundColor: "#ffffff" }).then(canvas => {
+            let link = document.createElement('a');
+            link.download = `REPORTE_${nombreArchivo}_${new Date().getTime()}.png`;
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+        }).catch(err => {
+            console.error(err);
+            alert("No se pudo generar el capture. Revisa que el contenido esté visible.");
+        });
+    }
+
+    function filtrarDetalleTecnico() {
+        let tec = document.getElementById('selectTecnicoFiltro').value;
+        let tbody = document.querySelector('#tableDetalleIndividual tbody');
+        if(!tec) {
+            document.getElementById('txtNombreTecnicoCaptura').innerText = "TÉCNICO: NO SELECCIONADO";
+            document.getElementById('txtKpisTecnicoCaptura').innerText = "OS Totales: 0 | Max Antigüedad: 0d";
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#a0aec0; padding:15px;">Selecciona una cuadrilla</td></tr>`;
+            return;
+        }
+        let lista = [...mapaAsignacionesTecnicos[tec]].sort((a,b) => b.ant - a.ant);
+        let maxAnt = lista.length > 0 ? Math.max(...lista.map(o=>o.ant)) : 0;
+        document.getElementById('txtNombreTecnicoCaptura').innerText = `👷 REPORTE: ${tec}`;
+        document.getElementById('txtKpisTecnicoCaptura').innerText = `OS Totales: ${lista.length} | Max Antigüedad: ${maxAnt} días`;
+        tbody.innerHTML = lista.map(o => `<tr>
+            <td style="text-align:left;"><b>${o.os}</b></td>
+            <td>${o.municipio}</td>
+            <td style="text-align:left;"><b>${o.barrio}</b></td>
+            <td><span class="badge badge-dark">${o.to}</span><br><small style="font-size:9px;">${o.descTo.substring(0,20)}</small></td>
+            <td><span class="badge ${o.ant >= 5 ? 'badge-red' : 'badge-green'}">${o.ant} d</span></td>
+            <td>${o.traba ? `<span class="badge badge-red">⚠️ ${o.traba}</span>` : `<span class="badge badge-green">OK</span>`}</td>
+            <td style="white-space: normal; word-break: break-word; font-size:10px; max-width:250px; text-align:left;">${o.coment}</td>
+        </tr>`).join("");
+    }
+
+    function exportarExcelTecnicoIndividual() {
+        let tec = document.getElementById('selectTecnicoFiltro').value;
+        if(!tec) return alert("❌ Selecciona una cuadrilla primero.");
+        let ws = XLSX.utils.json_to_sheet(mapaAsignacionesTecnicos[tec].map(o => ({ "OS": o.os, "Municipio": o.municipio, "Barrio": o.barrio, "TO": o.to, "Actividad": o.descTo, "Días": o.ant, "Traba": o.traba || "NINGUNA", "Comentario": o.coment })));
+        let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Asignaciones");
+        XLSX.writeFile(wb, `OS_${tec.replace(/[^A-Z0-9]/gi, '_')}.xlsx`);
+    }
+
+    function renderTablerosTop15(listas) {
+        let procesos = ["DAÑOS", "CAMPAÑAS", "NUEVAS CONEXIONES", "PQR"];
+        
+        procesos.forEach(p => {
+            let container = document.getElementById(`top15-${p}`);
+            if(!container) return;
+
+            let data = listas[p].sort((a, b) => b.ant - a.ant).slice(0, 15);
+            let totalOs = listas[p].length;
+
+            let html = `<h4>${p} <span style="float:right; color:#718096; font-size:10px;">(${totalOs})</span></h4>
+                        <table class="top10-table">
+                            <thead>
+                                <tr>
+                                    <th>OS</th>
+                                    <th>Barrio</th> 
+                                    <th>Técnico</th>
+                                    <th>Días</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+            
+            if(data.length === 0) {
+                html += `<tr><td colspan="4" style="text-align:center;">Sin órdenes antiguas</td></tr>`;
+            } else {
+                data.forEach(item => {
+                    let textClass = item.ant >= 5 ? 'color: #e53e3e;' : (item.ant > 2 ? 'color: #d69e2e;' : 'color: #38a169;');
+                    let trabaBadge = item.traba ? `<br><span class="badge badge-red" style="font-size:8px; padding:1px 3px;" title="${item.traba}">⚠️ ${item.traba.substring(0,12)}..</span>` : '';
+                    
+                    html += `<tr>
+                                <td style="font-weight:bold; color:var(--text);">${item.os}${trabaBadge}</td>
+                                <td style="font-size:9.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:70px;" title="${item.barrio}">${item.barrio}</td>
+                                <td style="font-size:9.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:80px;" title="${item.tec}">${item.tec}</td>
+                                <td style="font-weight:bold; ${textClass}">${item.ant} d</td>
+                             </tr>`;
+                });
+            }
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+        });
+    }
+
+    function renderOsLimpias() {
+        let f = document.getElementById('filtroOsLimpias').value;
+        let tbody = document.querySelector('#tableDisponibles tbody');
+        let html = "";
+        Object.values(datosDisponiblesLimpias).filter(x => f === "TODAS" || x.p === f).sort((a,b)=>b.c - a.c).forEach(x => {
+            let osText = x.osList.slice(0, 3).join(", ") + (x.osList.length > 3 ? "..." : "");
+            let badgeAnt = x.maxAnt >= 5 ? 'badge-red' : (x.maxAnt > 2 ? 'badge-yellow' : 'badge-green');
+            html += `<tr>
+                <td style="text-align:left;">${x.m}<br><b>${x.b}</b></td>
+                <td style="text-align:left;"><span class="badge badge-blue">${x.p}</span><br><small>${x.d.substring(0,25)}</small></td>
+                <td class="col-os" style="text-align:left;">${osText}</td>
+                <td><span class="badge ${badgeAnt}">${x.maxAnt} d</span></td>
+                <td><b>${x.c}</b></td>
+            </tr>`;
+        });
+        tbody.innerHTML = html || `<tr><td colspan="5" style="text-align:center; padding:10px;">Bolsa vacía con este filtro</td></tr>`;
+    }
+
+    function exportarOsLimpias() {
+        let f = document.getElementById('filtroOsLimpias').value;
+        let dataToExport = [];
+        Object.values(datosDisponiblesLimpias).filter(x => f === "TODAS" || x.p === f).forEach(x => {
+            x.osList.forEach(os => {
+                dataToExport.push({"OS": os, "Municipio": x.m, "Barrio": x.b, "Proceso": x.p, "Actividad": x.d, "Antigüedad (Días)": x.maxAnt});
+            });
+        });
+        if(dataToExport.length === 0) return alert("La bolsa está vacía, no hay datos para descargar.");
+        let ws = XLSX.utils.json_to_sheet(dataToExport);
+        let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "OS_Bolsa_Limpia");
+        XLSX.writeFile(wb, `Bolsa_OS_Limpias_${f}.xlsx`);
+    }
+
+    function renderCasuisticaTbl() {
+        let tbody = document.querySelector('#tableCasuistica tbody');
+        let html = Object.values(datosCasuisticaTbl).sort((a,b)=>b.c - a.c).map(x => {
+            let osText = x.osList.slice(0, 3).join(", ") + (x.osList.length > 3 ? "..." : "");
+            let badgeAnt = x.maxAnt >= 5 ? 'badge-red' : (x.maxAnt > 2 ? 'badge-yellow' : 'badge-green');
+            return `<tr>
+                <td style="text-align:left;"><b>${x.b}</b></td>
+                <td><span class="badge badge-dark">${x.to}</span></td>
+                <td style="color:var(--accent); font-weight:bold; text-align:left;">${x.m}</td>
+                <td class="col-os" style="text-align:left;">${osText}</td>
+                <td><span class="badge ${badgeAnt}">${x.maxAnt} d</span></td>
+                <td><span class="badge badge-red">${x.c}</span></td>
+            </tr>`;
+        }).join("");
+        tbody.innerHTML = html || `<tr><td colspan="6" style="text-align:center; padding:10px;">Filtros limpios en campo</td></tr>`;
+    }
+
+    function exportarOsTrabadas() {
+        let dataToExport = [];
+        Object.values(datosCasuisticaTbl).forEach(x => {
+            x.osList.forEach(os => {
+                dataToExport.push({"OS": os, "Barrio": x.b, "Tipo (TO)": x.to, "Motivo Traba (Casuística)": x.m, "Antigüedad (Días)": x.maxAnt});
+            });
+        });
+        if(dataToExport.length === 0) return alert("No hay órdenes trabadas en terreno para descargar.");
+        let ws = XLSX.utils.json_to_sheet(dataToExport);
+        let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "OS_Trabadas");
+        XLSX.writeFile(wb, `OS_Trabadas_Terreno.xlsx`);
+    }
+
+    function renderNucleosTbl() {
+        let tbody = document.querySelector('#tableCampanasIng tbody');
+        let html = Object.keys(nucleosObj).sort((a,b)=>nucleosObj[b]-nucleosObj[a]).map(k => `<tr><td style="font-weight:bold; text-align:left;">${k === 'SIN NUCLEO' ? '⚠️ SIN NUCLEO ASIGNADO' : k}</td><td><span class="badge ${k==='SIN NUCLEO'?'badge-red':'badge-blue'}">${nucleosObj[k]} OS</span></td></tr>`).join("");
+        tbody.innerHTML = html;
+    }
+
+    function exportarSinNucleo() {
+        if(!listadoSinNucleo.length) return alert("¡Limpieza al 100%! No hay órdenes sin núcleo.");
+        let ws = XLSX.utils.json_to_sheet(listadoSinNucleo);
+        let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Revisar");
+        XLSX.writeFile(wb, "OS_Sin_Ing_Nucleo.xlsx");
+    }
+</script>
+</body>
+</html>
