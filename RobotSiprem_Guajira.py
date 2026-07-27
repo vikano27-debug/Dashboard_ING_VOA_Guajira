@@ -140,20 +140,23 @@ try:
     time.sleep(6) 
 
     # =====================================================================
-    # 4. NAVEGACIÓN Y DESCARGA (SELECCIÓN: GUAJIRA)
+    # 4. NAVEGACIÓN Y DESCARGA (SELECCIÓN EXACTA: DELTEC GUAJ)
     # =====================================================================
-    print("🗺️ Seleccionando Territorio: GUAJIRA...")
+    print("🗺️ Seleccionando Territorio: GUAJIRA -> DELTEC GUAJ...")
+    
+    # 1. Clic en el menú Territorio/Aliado
     menu_territorio = wait.until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[2]/div/div/ul/li[2]/a/i')))
     menu_territorio.click()
-    time.sleep(3)
+    time.sleep(2)
     
-    # Búsqueda dinámica de la opción Guajira en el menú
-    opcion_guajira = wait.until(EC.presence_of_element_located((By.XPATH, "//b[contains(text(), 'GUAJIRA') or contains(text(), 'Guajira')] | //a[contains(text(), 'GUAJIRA') or contains(text(), 'Guajira')]")))
+    # 2. Poner el ratón sobre el elemento 'GUAJIRA' para desplegar el submenú
+    opcion_guajira = wait.until(EC.presence_of_element_located((By.XPATH, "//b[contains(text(), 'GUAJIRA')] | //a[contains(text(), 'GUAJIRA')]")))
     acciones.move_to_element(opcion_guajira).perform()
-    time.sleep(3)
+    time.sleep(2)
     
-    btn_guajira = wait.until(EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), 'GUAJIRA') or contains(text(), 'Guajira')]")))
-    btn_guajira.click()
+    # 3. Hacer clic en el submenú 'DELTEC GUAJ'
+    btn_deltec_guaj = wait.until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[2]/div/div/ul/li[2]/ul/div[2]/div/li/a | //a[contains(text(), 'DELTEC GUAJ')]")))
+    btn_deltec_guaj.click()
     time.sleep(5)
 
     print("⚙️ Navegando al Centro Tecnico...")
@@ -162,7 +165,7 @@ try:
     wait.until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[2]/div/div/ul/li[4]/ul/li[4]/a'))).click()
     time.sleep(5) 
 
-    # Limpiar temporales antiguos en ambas carpetas
+    # Limpiar temporales antiguos
     for ruta_limpia in [CARPETA_PROYECTO, CARPETA_DOWNLOADS_GENERAL]:
         for f in glob.glob(os.path.join(ruta_limpia, "ordenes*.xls*")):
             try:
@@ -179,7 +182,7 @@ try:
     
     print("⏳ Esperando la descarga del archivo fresco [GUAJIRA]...")
     
-    # Bucle inteligente de detección en AMBAS carpetas
+    # Bucle de detección de descarga
     archivo_nuevo = None
     for _ in range(15):
         time.sleep(2)
