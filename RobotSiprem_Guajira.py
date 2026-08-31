@@ -19,7 +19,7 @@ CARPETA_PROYECTO = os.path.dirname(os.path.abspath(__file__))
 CARPETA_DOWNLOADS_GENERAL = os.path.join(os.path.expanduser("~"), "Downloads")
 
 URL_SIPREM = "https://sipremsol.co/index.php?opcion=Perfil"
-URL_CASUISTICA = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQOJkGvpBZwgK7sM6UafZJ5ocYI3lAAF_dUBXwZjXZq-SRB6nvjxLGJpakZq7EBUA/pub?output=csv"
+URL_CASUISTICA = "https://docs.google.com/spreadsheets/d/1Kj4UaiZHvfKTlh8zJn9KdUasLnf8hdteqALFF0rKAyM/export?format=csv&gid=224477929"
 
 USUARIO_SIPREM = "1082895533"
 PASSWORD_SIPREM = "1082895533" 
